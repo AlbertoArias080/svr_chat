@@ -1,0 +1,122 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Subir Documentos - BMC{% endblock %}
+
+{% block main %}
+<div class="card">
+    <h1>📤 Subir Documentos</h1>
+    <p class="subtitle">Administración de documentos en AWS S3</p>
+    
+    <!-- Formulario de Upload -->
+    <div class="card">
+        <h3>Subir nuevo documento</h3>
+        <form method="post" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            
+            <label for="document">Seleccionar archivo:</label>
+            {{ form.document(class="input") }}
+            {% for error in form.document.errors %}
+                <span style="color: #ff6b6b; font-size: 0.9rem;">{{ error }}</span>
+            {% endfor %}
+            
+            <label for="description">Descripción:</label>
+            {{ form.description(class="input", placeholder="Descripción del documento") }}
+            {% for error in form.description.errors %}
+                <span style="color: #ff6b6b; font-size: 0.9rem;">{{ error }}</span>
+            {% endfor %}
+            
+            <label for="category">Categoría:</label>
+            {{ form.category(class="input") }}
+            {% for error in form.category.errors %}
+                <span style="color: #ff6b6b; font-size: 0.9rem;">{{ error }}</span>
+            {% endfor %}
+            
+            <button type="submit" class="btn mt-2">📤 Subir Documento</button>
+        </form>
+    </div>
+    
+    <!-- Lista de Documentos Subidos -->
+    <div class="card mt-2">
+        <h3>Mis Documentos Subidos ({{ documents|length }})</h3>
+        
+        {% if documents %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--input);">
+                        <th style="padding: 12px; text-align: left;">Nombre</th>
+                        <th style="padding: 12px; text-align: left;">Descripción</th>
+                        <th style="padding: 12px; text-align: left;">Categoría</th>
+                        <th style="padding: 12px; text-align: left;">Tamaño</th>
+                        <th style="padding: 12px; text-align: left;">Fecha</th>
+                        <th style="padding: 12px; text-align: left;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr style="border-bottom: 1px solid var(--outline);">
+                        <td style="padding: 12px;">
+                            <strong>{{ doc.original_filename }}</strong>
+                        </td>
+                        <td style="padding: 12px;">{{ doc.description }}</td>
+                        <td style="padding: 12px;">
+                            <span style="padding: 4px 8px; border-radius: 6px; background: #355b6f; color: #7fb6ff;">
+                                {{ doc.category }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; color: var(--muted);">
+                            {{ "%.2f"|format(doc.file_size / 1024) }} KB
+                        </td>
+                        <td style="padding: 12px; color: var(--muted); font-size: 0.9rem;">
+                            {{ doc.created_at[:10] }}
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 8px;">
+                                <a href="{{ doc.file_url }}" target="_blank" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">
+                                    📥 Descargar
+                                </a>
+                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; background: #6a3654; border-color: #6a3654;"
+                                        onclick="deleteDocument('{{ doc.document_id }}', '{{ doc.original_filename }}')">
+                                    🗑️ Eliminar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+            <p>No hay documentos subidos aún</p>
+            <p class="subtitle">Los documentos aparecerán aquí después de ser subidos a S3</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function deleteDocument(documentId, filename) {
+    if (confirm(`¿Estás seguro de que quieres eliminar "${filename}"?`)) {
+        fetch(`/admin/delete-document/${documentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Documento eliminado exitosamente');
+                location.reload();
+            } else {
+                alert('Error eliminando documento: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

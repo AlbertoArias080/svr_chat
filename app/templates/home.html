@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - BMC{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card text-center">
+        <h1>Bienvenido a BMC</h1>
+        <p class="subtitle">Sistema de gestión inteligente</p>
+        
+        {% if not current_user.is_authenticated %}
+            <div class="row" style="justify-content: center; gap: 16px; margin-top: 24px;">
+                <a href="{{ url_for('auth.login') }}" class="btn" style="width: auto; padding: 12px 24px;">
+                    Iniciar Sesión
+                </a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="width: auto; padding: 12px 24px;">
+                    Registrarse
+                </a>
+            </div>
+        {% else %}
+            <div style="margin-top: 24px;">
+                <p>Hola, <strong>{{ current_user.email }}</strong>!</p>
+                <p>Tu rol: <span style="color: #7fb6ff;">{{ current_user.role }}</span></p>
+                <a href="{{ url_for('main.dashboard') }}" class="btn" style="width: auto; padding: 12px 24px; margin-top: 16px;">
+                    Ir al Dashboard
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand"><span>BMC</span></div>
+        <nav>
+            <div class="section">Navegación</div>
+            <a href="{{ url_for('main.home') }}" class="item">🏠 Volver al Home</a>
+
+            {% if current_user.is_authenticated %}
+                {% if current_user.role == 'admin' %}
+                    <!-- Opciones solo para administradores -->
+                    <div class="section">Administración</div>
+                    <a href="{{ url_for('admin.dashboard') }}" class="item">📊 Mi gestión</a>
+                    <a href="{{ url_for('admin.upload_ui') }}" class="item">📤 Cargar documentos</a>
+                {% else %}
+                    <!-- Opciones para usuarios normales -->
+                    <div class="section">Tareas</div>
+                    <a href="{{ url_for('main.user_chat') }}" class="item">💬 Chat con Agentes</a>
+                {% endif %}
+                
+                <div class="section">Cuenta</div>
+                <a href="{{ url_for('auth.logout') }}" class="item">🚪 Cerrar sesión</a>
+            {% else %}
+                <!-- Opción si el usuario no está autenticado -->
+                <div class="section">Cuenta</div>
+                <a href="{{ url_for('auth.login') }}" class="item">🔐 Iniciar sesión</a>
+            {% endif %}
+        </nav>
+    </aside>
+
+    <section class="content">
+        {% block main %}{% endblock %}
+    </section>
+</div>
+{% endblock %}

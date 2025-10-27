@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>¡Hey! Nos encanta verte</h1>
+    <p class="subtitle">Ingresa tus datos para continuar</p>
+    
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        
+        <label>Correo electrónico</label>
+        {{ form.email(class="input", placeholder="name@email.com") }}
+        {% for error in form.email.errors %}
+            <span style="color: red;">{{ error }}</span>
+        {% endfor %}
+        
+        <label>Contraseña</label>
+        {{ form.password(class="input", placeholder="Introduce tu contraseña") }}
+        {% for error in form.password.errors %}
+            <span style="color: red;">{{ error }}</span>
+        {% endfor %}
+        
+        {{ form.submit(class="btn") }}
+        
+        <div class="linkrow">
+            <a href="{{ url_for('auth.register') }}" class="muted">¿No tienes cuenta? Crear una</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Dashboard Admin - BMC{% endblock %}
+
+{% block main %}
+<div class="card">
+    <h1>Dashboard Administrador</h1>
+    <p class="subtitle">Panel de control del sistema</p>
+    
+    <!-- Estadísticas -->
+    <div class="row">
+        <div class="card" style="flex: 1; text-align: center;">
+            <h3>👥 Total Usuarios</h3>
+            <p style="font-size: 2rem; margin: 0; color: #7fb6ff;">{{ users|length }}</p>
+        </div>
+        
+        <div class="card" style="flex: 1; text-align: center;">
+            <h3>👑 Admins</h3>
+            <p style="font-size: 2rem; margin: 0; color: #7fffd4;">
+                {{ users|selectattr("role", "equalto", "admin")|list|length }}
+            </p>
+        </div>
+        
+        <div class="card" style="flex: 1; text-align: center;">
+            <h3>👤 Usuarios Normales</h3>
+            <p style="font-size: 2rem; margin: 0; color: #dbc7ff;">
+                {{ users|selectattr("role", "equalto", "user")|list|length }}
+            </p>
+        </div>
+    </div>
+    
+    <!-- Acciones Rápidas -->
+    <div class="card mt-2">
+        <h3>Acciones Rápidas</h3>
+        <div class="row">
+            <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline" style="flex: 1; text-align: center;">
+                👥 Gestión de Usuarios
+            </a>
+            <a href="{{ url_for('admin.upload_ui') }}" class="btn btn-outline" style="flex: 1; text-align: center;">
+                📤 Cargar Documentos
+            </a>
+        </div>
+    </div>
+    
+    <!-- Lista de Usuarios Recientes -->
+    <div class="card mt-2">
+        <h3>Últimos Usuarios Registrados</h3>
+        
+        {% if users %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--input);">
+                        <th style="padding: 12px; text-align: left;">Email</th>
+                        <th style="padding: 12px; text-align: left;">Rol</th>
+                        <th style="padding: 12px; text-align: left;">Registro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users[:5] %}
+                    <tr style="border-bottom: 1px solid var(--outline);">
+                        <td style="padding: 12px;">{{ user.email }}</td>
+                        <td style="padding: 12px;">
+                            <span style="padding: 4px 8px; border-radius: 6px; 
+                                {% if user.role == 'admin' %}background: #2d5a4d; color: #7fffd4;{% else %}background: #355b6f; color: #7fb6ff;{% endif %}">
+                                {{ user.role }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; color: var(--muted); font-size: 0.9rem;">
+                            {{ user.created_at[:10] if user.created_at }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if users|length > 5 %}
+        <div class="mt-2">
+            <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline" style="width: auto;">
+                Ver todos los usuarios ({{ users|length }})
+            </a>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div style="text-align: center; padding: 20px; color: var(--muted);">
+            <p>No hay usuarios registrados</p>
+            <a href="{{ url_for('auth.register') }}" class="btn" style="width: auto; margin-top: 10px;">
+                Crear primer usuario
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

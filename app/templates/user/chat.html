@@ -1,0 +1,373 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Chat con Agente BMC - Bedrock Agent{% endblock %}
+
+{% block main %}
+<div class="card">
+    <h1>💬 Chat con Agente BMC</h1>
+    <p class="subtitle">Conversa con nuestro agente especializado con acceso a la Knowledge Base</p>
+    
+    <!-- Información del Agente -->
+    <div class="card" style="background: linear-gradient(135deg, #2d5a4d, #355b6f); color: white; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="margin: 0; color: #7fffd4;">🤖 Agente BMC Personalizado</h3>
+                <p style="margin: 4px 0 0 0; opacity: 0.9;">
+                    Conectado a Amazon Bedrock Agent con Knowledge Base
+                    {% if agent_info and agent_info.success %}
+                    - <strong>{{ agent_info.agent_name }}</strong>
+                    {% endif %}
+                </p>
+            </div>
+            <div style="text-align: right;">
+                <div style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem;">
+                    🧠 Knowledge Base Activa
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <!-- Controles del Chat -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Agente:</strong> 
+                    <span style="color: #7fb6ff;">Bedrock Agent Personalizado</span>
+                    <span id="agent-status" style="margin-left: 8px; padding: 2px 6px; background: #2d5a4d; color: #7fffd4; border-radius: 4px; font-size: 0.8rem;">
+                        ● Conectado
+                    </span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="agent-info" class="btn btn-outline" style="width: auto; padding: 8px 12px;">
+                        ℹ️ Info Agente
+                    </button>
+                    <button id="clear-chat" class="btn btn-outline" style="width: auto; padding: 8px 16px;">
+                        🗑️ Limpiar Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de Mensajes -->
+        <div id="chat-messages" class="chat-messages" style="height: 500px; border: 1px solid var(--outline); border-radius: 12px; padding: 16px; margin-bottom: 16px; overflow-y: auto; background: var(--input);">
+            <!-- Mensaje de bienvenida -->
+            <div class="message bot-message" style="background: var(--card); padding: 16px; border-radius: 12px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: start; gap: 8px;">
+                    <div style="background: #2d5a4d; padding: 6px 10px; border-radius: 8px; font-size: 0.9rem; color: #7fffd4;">🤖 AGENTE BMC</div>
+                    <div style="flex: 1;">
+                        <strong>Agente Especializado:</strong> ¡Hola {{ current_user.email }}! Soy tu agente especializado de BMC con acceso a la documentación completa del sistema. Puedo ayudarte con:
+                        <ul style="margin: 8px 0; padding-left: 20px;">
+                            <li>Consultas sobre funcionalidades específicas</li>
+                            <li>Procedimientos documentados en la Knowledge Base</li>
+                            <li>Configuraciones del sistema</li>
+                            <li>Y mucho más usando la documentación actualizada</li>
+                        </ul>
+                        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 8px; padding: 8px; background: rgba(45, 90, 77, 0.1); border-radius: 6px;">
+                            🧠 <strong>Powered by:</strong> Amazon Bedrock Agent + Knowledge Base
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulario de Mensaje -->
+        <form id="chat-form" class="chat-form">
+            <div class="row">
+                <input type="text" name="message" id="message-input" class="input" 
+                       placeholder="Escribe tu pregunta para el agente especializado..." style="flex: 1;" 
+                       required autocomplete="off">
+                <button type="submit" class="btn" style="width: auto; background: #2d5a4d; border-color: #2d5a4d;" id="send-button">
+                    <span id="send-text">Enviar a Agente</span>
+                    <span id="loading-spinner" style="display: none;">⏳ Consultando KB...</span>
+                </button>
+            </div>
+        </form>
+        
+        <!-- Ejemplos de Preguntas Específicas -->
+        <div class="card mt-2">
+            <h4>💡 Ejemplos de consultas para la Knowledge Base:</h4>
+            <div class="row" style="margin-top: 12px; flex-wrap: wrap;">
+                <button class="btn btn-outline" style="flex: 1; min-width: 200px; font-size: 0.8rem; padding: 8px; margin: 4px;" 
+                        onclick="setExample('¿Qué procedimientos hay para la carga de documentos?')">
+                    📤 Procedimientos documentos
+                </button>
+                <button class="btn btn-outline" style="flex: 1; min-width: 200px; font-size: 0.8rem; padding: 8px; margin: 4px;" 
+                        onclick="setExample('Explícame las funcionalidades de administración')">
+                    👥 Funcionalidades admin
+                </button>
+                <button class="btn btn-outline" style="flex: 1; min-width: 200px; font-size: 0.8rem; padding: 8px; margin: 4px;" 
+                        onclick="setExample('¿Cómo configurar los permisos de usuario?')">
+                    ⚙️ Configuración permisos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+let isLoading = false;
+
+// Cargar historial al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    loadChatHistory();
+    checkAgentStatus();
+});
+
+function setExample(question) {
+    document.getElementById('message-input').value = question;
+    document.getElementById('message-input').focus();
+}
+
+function checkAgentStatus() {
+    fetch('/api/chat/agent-info')
+        .then(response => response.json())
+        .then(data => {
+            const statusElement = document.getElementById('agent-status');
+            if (data.success) {
+                statusElement.innerHTML = `● ${data.agent_status} - ${data.agent_name}`;
+                statusElement.style.background = '#2d5a4d';
+            } else {
+                statusElement.innerHTML = '⚠️ Error de conexión';
+                statusElement.style.background = '#6a3654';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking agent status:', error);
+        });
+}
+
+function loadChatHistory() {
+    fetch('/api/chat/history')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayChatHistory(data.history);
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando historial:', error);
+        });
+}
+
+function displayChatHistory(history) {
+    const container = document.getElementById('chat-messages');
+    // Mantener el mensaje de bienvenida inicial
+    const welcomeMessage = container.innerHTML;
+    container.innerHTML = welcomeMessage;
+    
+    history.forEach(msg => {
+        if (!msg.is_user && msg.content.includes('¡Hola')) {
+            return; // Saltar mensaje de bienvenida duplicado
+        }
+        addMessageToChat(msg.content, msg.is_user ? 'user' : 'assistant', false);
+    });
+    
+    scrollToBottom();
+}
+
+function addMessageToChat(message, role, animate = true, citations = false) {
+    const container = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${role}-message`;
+    
+    if (role === 'user') {
+        messageDiv.innerHTML = `
+            <div style="display: flex; align-items: start; gap: 8px; justify-content: flex-end;">
+                <div>
+                    <strong>👤 Tú:</strong> ${escapeHtml(message)}
+                </div>
+                <div style="background: #355b6f; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: #7fb6ff;">Tú</div>
+            </div>
+        `;
+    } else {
+        let citationBadge = '';
+        if (citations) {
+            citationBadge = '<span class="citation-badge">🧠 KB</span>';
+        }
+        
+        messageDiv.innerHTML = `
+            <div style="display: flex; align-items: start; gap: 8px;">
+                <div style="background: #2d5a4d; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: #7fffd4;">🤖 AGENTE</div>
+                <div style="flex: 1;">
+                    <strong>Agente Especializado:</strong> ${escapeHtml(message)} ${citationBadge}
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-top: 8px;">
+                Powered by Amazon Bedrock Agent + Knowledge Base
+            </div>
+        `;
+    }
+    
+    if (animate) {
+        messageDiv.style.opacity = '0';
+        messageDiv.style.transform = 'translateY(10px)';
+    }
+    
+    container.appendChild(messageDiv);
+    
+    if (animate) {
+        setTimeout(() => {
+            messageDiv.style.opacity = '1';
+            messageDiv.style.transform = 'translateY(0)';
+        }, 10);
+    }
+    
+    scrollToBottom();
+}
+
+function showTypingIndicator() {
+    const container = document.getElementById('chat-messages');
+    const typingDiv = document.createElement('div');
+    typingDiv.id = 'typing-indicator';
+    typingDiv.className = 'message bot-message';
+    typingDiv.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="background: #2d5a4d; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: #7fffd4;">🤖 AGENTE</div>
+            <div class="typing-indicator">
+                Consultando Knowledge Base
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+    `;
+    container.appendChild(typingDiv);
+    scrollToBottom();
+}
+
+function hideTypingIndicator() {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('chat-messages');
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/\n/g, '<br>');
+}
+
+// Manejar envío de mensajes
+document.getElementById('chat-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (isLoading) return;
+    
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value.trim();
+    
+    if (message) {
+        // Agregar mensaje del usuario al chat
+        addMessageToChat(message, 'user');
+        messageInput.value = '';
+        
+        // Mostrar indicador de typing
+        showTypingIndicator();
+        
+        // Deshabilitar formulario
+        isLoading = true;
+        document.getElementById('send-button').disabled = true;
+        document.getElementById('send-text').style.display = 'none';
+        document.getElementById('loading-spinner').style.display = 'inline';
+        
+        // Enviar mensaje al servidor
+        fetch('/api/chat/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideTypingIndicator();
+            
+            if (data.success) {
+                addMessageToChat(data.response, 'assistant', true, data.has_citations);
+                if (data.has_citations) {
+                    console.log('Respuesta con', data.citations_count, 'citaciones de la Knowledge Base');
+                }
+            } else {
+                addMessageToChat(`❌ Error del agente: ${data.error}`, 'assistant');
+            }
+        })
+        .catch(error => {
+            hideTypingIndicator();
+            addMessageToChat(`❌ Error de conexión: ${error}`, 'assistant');
+        })
+        .finally(() => {
+            // Rehabilitar formulario
+            isLoading = false;
+            document.getElementById('send-button').disabled = false;
+            document.getElementById('send-text').style.display = 'inline';
+            document.getElementById('loading-spinner').style.display = 'none';
+            messageInput.focus();
+        });
+    }
+});
+
+// Info del agente
+document.getElementById('agent-info').addEventListener('click', function() {
+    fetch('/api/chat/agent-info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Información del Agente:\n\n` +
+                      `Nombre: ${data.agent_name}\n` +
+                      `Estado: ${data.agent_status}\n` +
+                      `Alias: ${data.agent_alias}\n` +
+                      `Knowledge Base: ${data.knowledge_base_id || 'N/A'}`);
+            } else {
+                alert('Error obteniendo info del agente: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión: ' + error);
+        });
+});
+
+// Limpiar chat
+document.getElementById('clear-chat').addEventListener('click', function() {
+    if (confirm('¿Estás seguro de que quieres limpiar todo el historial de chat?')) {
+        fetch('/api/chat/clear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('chat-messages');
+                // Mantener solo el mensaje de bienvenida
+                const welcomeMessage = container.querySelector('.bot-message');
+                container.innerHTML = '';
+                if (welcomeMessage) {
+                    container.appendChild(welcomeMessage);
+                }
+            } else {
+                alert('Error limpiando chat: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión: ' + error);
+        });
+    }
+});
+
+// Auto-focus en el input
+document.getElementById('message-input').focus();
+</script>
+{% endblock %}

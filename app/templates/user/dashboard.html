@@ -1,0 +1,28 @@
+{% extends "base_sidebar.html" %}
+
+{% block title %}Dashboard Usuario - BMC{% endblock %}
+
+{% block main %}
+<div class="card">
+    <h1>Dashboard Usuario</h1>
+    <p class="subtitle">Bienvenido, {{ current_user.email }}</p>
+    
+    <div class="row">
+        <div class="card" style="flex: 1;">
+            <h3>💬 Chat con Agentes</h3>
+            <p>Inicia una conversación con nuestros agentes inteligentes</p>
+            <a href="{{ url_for('main.user_chat') }}" class="btn btn-outline" style="width: auto;">
+                Ir al Chat
+            </a>
+        </div>
+        
+        <div class="card" style="flex: 1;">
+            <h3>📋 Mis Actividades</h3>
+            <p>Revisa tu historial y actividades recientes</p>
+            <button class="btn btn-outline" style="width: auto;">
+                Ver Actividades
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
