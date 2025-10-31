@@ -3,101 +3,154 @@
 {% block title %}Subir Documentos - BMC{% endblock %}
 
 {% block main %}
-<div class="card">
-    <h1>📤 Subir Documentos</h1>
-    <p class="subtitle">Administración de documentos en AWS S3</p>
-    
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h1>Subir Documentos</h1>
+        <p class="dashboard-subtitle">Administración de documentos en AWS S3</p>
+    </div>
+
     <!-- Formulario de Upload -->
-    <div class="card">
-        <h3>Subir nuevo documento</h3>
-        <form method="post" enctype="multipart/form-data">
+    <div class="section-card">
+        <div class="section-header">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Subir nuevo documento</h2>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="upload-form">
             {{ form.hidden_tag() }}
             
-            <label for="document">Seleccionar archivo:</label>
-            {{ form.document(class="input") }}
-            {% for error in form.document.errors %}
-                <span style="color: #ff6b6b; font-size: 0.9rem;">{{ error }}</span>
-            {% endfor %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="document" class="form-label">
+                        <i class="fas fa-file"></i>
+                        Seleccionar archivo
+                    </label>
+                    <div class="file-input-container">
+                        {{ form.document(class="file-input", id="document") }}
+                        <label for="document" class="file-input-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span class="file-text">Seleccionar archivo</span>
+                            <span class="file-name" id="fileName">Sin archivos seleccionados</span>
+                        </label>
+                    </div>
+                    {% for error in form.document.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="description" class="form-label">
+                        <i class="fas fa-align-left"></i>
+                        Descripción
+                    </label>
+                    {{ form.description(class="form-input", placeholder="Descripción del documento", id="description") }}
+                    {% for error in form.description.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="category" class="form-label">
+                        <i class="fas fa-tag"></i>
+                        Categoría
+                    </label>
+                    {{ form.category(class="form-select", id="category") }}
+                    {% for error in form.category.errors %}
+                        <span class="error-message">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
             
-            <label for="description">Descripción:</label>
-            {{ form.description(class="input", placeholder="Descripción del documento") }}
-            {% for error in form.description.errors %}
-                <span style="color: #ff6b6b; font-size: 0.9rem;">{{ error }}</span>
-            {% endfor %}
-            
-            <label for="category">Categoría:</label>
-            {{ form.category(class="input") }}
-            {% for error in form.category.errors %}
-                <span style="color: #ff6b6b; font-size: 0.9rem;">{{ error }}</span>
-            {% endfor %}
-            
-            <button type="submit" class="btn mt-2">📤 Subir Documento</button>
+            <button type="submit" class="btn-primary upload-btn">
+                <i class="fas fa-upload"></i>
+                Subir Documento
+            </button>
         </form>
     </div>
     
     <!-- Lista de Documentos Subidos -->
-    <div class="card mt-2">
-        <h3>Mis Documentos Subidos ({{ documents|length }})</h3>
+    <div class="section-card">
+        <div class="section-header">
+            <h2><i class="fas fa-folder-open"></i> Mis Documentos Subidos ({{ documents|length }})</h2>
+        </div>
         
         {% if documents %}
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: var(--input);">
-                        <th style="padding: 12px; text-align: left;">Nombre</th>
-                        <th style="padding: 12px; text-align: left;">Descripción</th>
-                        <th style="padding: 12px; text-align: left;">Categoría</th>
-                        <th style="padding: 12px; text-align: left;">Tamaño</th>
-                        <th style="padding: 12px; text-align: left;">Fecha</th>
-                        <th style="padding: 12px; text-align: left;">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for doc in documents %}
-                    <tr style="border-bottom: 1px solid var(--outline);">
-                        <td style="padding: 12px;">
-                            <strong>{{ doc.original_filename }}</strong>
-                        </td>
-                        <td style="padding: 12px;">{{ doc.description }}</td>
-                        <td style="padding: 12px;">
-                            <span style="padding: 4px 8px; border-radius: 6px; background: #355b6f; color: #7fb6ff;">
-                                {{ doc.category }}
-                            </span>
-                        </td>
-                        <td style="padding: 12px; color: var(--muted);">
-                            {{ "%.2f"|format(doc.file_size / 1024) }} KB
-                        </td>
-                        <td style="padding: 12px; color: var(--muted); font-size: 0.9rem;">
-                            {{ doc.created_at[:10] }}
-                        </td>
-                        <td style="padding: 12px;">
-                            <div style="display: flex; gap: 8px;">
-                                <a href="{{ doc.file_url }}" target="_blank" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">
-                                    📥 Descargar
-                                </a>
-                                <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; background: #6a3654; border-color: #6a3654;"
-                                        onclick="deleteDocument('{{ doc.document_id }}', '{{ doc.original_filename }}')">
-                                    🗑️ Eliminar
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+            <div class="upload-table-container">
+                <table class="upload-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Categoría</th>
+                            <th>Tamaño</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td class="upload-doc-name">
+                                <i class="fas fa-file-pdf"></i>
+                                <span>{{ doc.original_filename }}</span>
+                            </td>
+                            <td class="upload-doc-desc">
+                                {{ doc.description or 'Sin descripción' }}
+                            </td>
+                            <td>
+                                <span class="upload-category">
+                                    {{ doc.category }}
+                                </span>
+                            </td>
+                            <td class="upload-file-size">
+                                {{ "%.2f"|format(doc.file_size / 1024) }} KB
+                            </td>
+                            <td class="upload-doc-date">
+                                {{ doc.created_at[:10] }}
+                            </td>
+                            <td>
+                                <div class="upload-actions">
+                                    <a href="{{ doc.file_url }}" target="_blank" class="upload-btn upload-download">
+                                        <i class="fas fa-download"></i>
+                                        Descargar
+                                    </a>
+                                    <button class="upload-btn upload-delete" 
+                                            onclick="deleteDocument('{{ doc.document_id }}', '{{ doc.original_filename }}')">
+                                        <i class="fas fa-trash"></i>
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% else %}
-        <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <p>No hay documentos subidos aún</p>
-            <p class="subtitle">Los documentos aparecerán aquí después de ser subidos a S3</p>
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h3>No hay documentos subidos aún</h3>
+            <p>Los documentos aparecerán aquí después de ser subidos a S3</p>
         </div>
         {% endif %}
     </div>
 </div>
 
 <script>
+document.getElementById('document').addEventListener('change', function(e) {
+    const fileName = e.target.files[0] ? e.target.files[0].name : 'Sin archivos seleccionados';
+    document.getElementById('fileName').textContent = fileName;
+});
+
 function deleteDocument(documentId, filename) {
     if (confirm(`¿Estás seguro de que quieres eliminar "${filename}"?`)) {
+        const deleteBtn = event.target.closest('.delete-btn');
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+        deleteBtn.disabled = true;
+        
         fetch(`/admin/delete-document/${documentId}`, {
             method: 'POST',
             headers: {
@@ -107,16 +160,37 @@ function deleteDocument(documentId, filename) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Documento eliminado exitosamente');
-                location.reload();
+                showNotification('Documento eliminado exitosamente', 'success');
+                setTimeout(() => location.reload(), 1000);
             } else {
-                alert('Error eliminando documento: ' + data.error);
+                showNotification('Error eliminando documento: ' + data.error, 'error');
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
             }
         })
         .catch(error => {
-            alert('Error de conexión: ' + error);
+            showNotification('Error de conexión: ' + error, 'error');
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
         });
     }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        ${message}
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.add('show'), 100);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 </script>
 {% endblock %}

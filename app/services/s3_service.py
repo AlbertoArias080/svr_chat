@@ -3,6 +3,7 @@ import uuid
 from botocore.exceptions import ClientError, NoCredentialsError
 from config import Config
 import os
+import time
 
 class S3Service:
     def __init__(self):
@@ -14,12 +15,22 @@ class S3Service:
         )
         self.bucket_name = Config.S3_BUCKET_NAME
         self.ensure_bucket_exists()
+        
+        self.bedrock_agent_client = boto3.client(
+            'bedrock-agent',
+            aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
+            region_name=Config.AWS_REGION
+        )
+        
+        self.knowledge_base_id = os.environ.get('BEDROCK_KNOWLEDGE_BASE_ID')
+        self.ensure_bucket_exists()
 
     def ensure_bucket_exists(self):
         """Verificar que el bucket S3 existe, si no crearlo"""
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
-            print(f"✅ Bucket S3 '{self.bucket_name}' existe y está accesible")
+            print(f"Bucket S3 '{self.bucket_name}' existe y está accesible")
         except ClientError as e:
             error_code = e.response['Error']['Code']
             if error_code == '404':
@@ -32,11 +43,11 @@ class S3Service:
                             Bucket=self.bucket_name,
                             CreateBucketConfiguration={'LocationConstraint': Config.AWS_REGION}
                         )
-                    print(f"✅ Bucket S3 '{self.bucket_name}' creado exitosamente")
+                    print(f"Bucket S3 '{self.bucket_name}' creado exitosamente")
                 except ClientError as create_error:
-                    print(f"❌ Error creando bucket S3: {create_error}")
+                    print(f"Error creando bucket S3: {create_error}")
             else:
-                print(f"❌ Error accediendo a bucket S3: {e}")
+                print(f"Error accediendo a bucket S3: {e}")
 
     def upload_file(self, file, folder=None, user_id=None):
         """Subir archivo a S3"""
@@ -71,6 +82,8 @@ class S3Service:
             # Generar URL del archivo
             file_url = f"https://{self.bucket_name}.s3.{Config.AWS_REGION}.amazonaws.com/{s3_key}"
             
+            print("Archivo subido - La Lambda sincronizará automáticamente la KB")
+            time.sleep(2)
             return {
                 'success': True,
                 's3_key': s3_key,
@@ -91,6 +104,8 @@ class S3Service:
         """Eliminar archivo de S3"""
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
+            print("Archivo eliminado - La Lambda sincronizará automáticamente la KB")
+            time.sleep(2)
             return {'success': True}
         except ClientError as e:
             return {'success': False, 'error': f"Error eliminando archivo: {e}"}
@@ -128,3 +143,172 @@ class S3Service:
             return url
         except ClientError as e:
             return None
+
+    def get_sync_status(self):
+        """Obtener solo el último estado de sincronización - Versión corregida"""
+        try:
+            if not self.knowledge_base_id:
+                return {'success': False, 'error': 'Knowledge Base ID no configurado'}
+            
+            print(f"🔍 Consultando último sync status para KB: {self.knowledge_base_id}")
+            
+            # Primero obtener todos los data sources
+            try:
+                data_sources_response = self.bedrock_agent_client.list_data_sources(
+                    knowledgeBaseId=self.knowledge_base_id
+                )
+                data_sources = data_sources_response.get('dataSourceSummaries', [])
+                print(f"Data sources encontrados: {len(data_sources)}")
+                
+            except Exception as ds_error:
+                print(f"Error obteniendo data sources: {ds_error}")
+                return {'success': False, 'error': f"No se pudieron obtener los data sources: {str(ds_error)}"}
+            
+            if not data_sources:
+                return {
+                    'success': True,
+                    'last_sync_job': None,
+                    'message': 'No hay data sources configurados',
+                    'data_sources_count': 0
+                }
+            
+            latest_job = None
+            
+            # Para cada data source, obtener sus jobs de ingestión
+            for data_source in data_sources:
+                data_source_id = data_source.get('dataSourceId')
+                data_source_name = data_source.get('name', 'N/A')
+                data_source_status = data_source.get('status', 'UNKNOWN')
+                
+                print(f"🔍 Revisando data source: {data_source_name} (Status: {data_source_status})")
+                
+                if not data_source_id:
+                    print(f"Data source sin ID, saltando...")
+                    continue
+                
+                try:
+                    # Obtener jobs de ingestión para este data source
+                    jobs_response = self.bedrock_agent_client.list_ingestion_jobs(
+                        knowledgeBaseId=self.knowledge_base_id,
+                        dataSourceId=data_source_id,
+                        maxResults=10  # Obtenemos varios para encontrar el más reciente
+                    )
+                    
+                    jobs = jobs_response.get('ingestionJobSummaries', [])
+                    print(f"Jobs encontrados para {data_source_name}: {len(jobs)}")
+                    
+                    for job in jobs:
+                        job_status = job.get('status', 'UNKNOWN')
+                        started_at = job.get('startedAt')
+                        
+                        print(f"  - Job {job.get('ingestionJobId', 'N/A')}: {job_status}")
+                        
+                        # Solo considerar jobs completados o en progreso
+                        if job_status in ['COMPLETE', 'IN_PROGRESS', 'STARTING']:
+                            job_info = {
+                                'job_id': job.get('ingestionJobId', 'N/A'),
+                                'status': job_status,
+                                'data_source_id': data_source_id,
+                                'data_source_name': data_source_name,
+                                'started_at': started_at,
+                                'last_modified_at': job.get('lastModifiedAt', 'N/A'),
+                                'started_at_iso': started_at.isoformat() if started_at else 'N/A'
+                            }
+                            
+                            # Comparar objetos datetime, no strings
+                            if latest_job is None:
+                                latest_job = job_info
+                            elif started_at and latest_job.get('started_at'):
+                                # Ambos son objetos datetime, podemos comparar
+                                if started_at > latest_job['started_at']:
+                                    latest_job = job_info
+                            # Si latest_job no tiene started_at válido, usar el nuevo
+                            elif started_at and not latest_job.get('started_at'):
+                                latest_job = job_info
+                            
+                except Exception as ds_error:
+                    print(f"⚠️ Error obteniendo jobs para {data_source_name}: {ds_error}")
+                    continue
+            
+            if latest_job:
+                # Formatear las fechas para la respuesta final
+                if latest_job.get('started_at'):
+                    latest_job['started_at'] = latest_job['started_at'].isoformat()
+                if latest_job.get('last_modified_at') and hasattr(latest_job['last_modified_at'], 'isoformat'):
+                    latest_job['last_modified_at'] = latest_job['last_modified_at'].isoformat()
+                
+                print(f"Último job encontrado: {latest_job['job_id']} - {latest_job['status']}")
+                return {
+                    'success': True,
+                    'last_sync_job': latest_job,
+                    'data_sources_count': len(data_sources),
+                    'message': 'Última sincronización encontrada'
+                }
+            else:
+                print("No se encontraron jobs de sincronización recientes")
+                return {
+                    'success': True,
+                    'last_sync_job': None,
+                    'data_sources_count': len(data_sources),
+                    'message': 'No hay trabajos de sincronización recientes'
+                }
+                
+        except Exception as e:
+            error_msg = f"Error obteniendo último estado de sync: {str(e)}"
+            print(f" {error_msg}")
+            return {'success': False, 'error': error_msg}
+    
+    
+    def get_data_source_info(self):
+        """Obtener información del data source - Versión segura"""
+        try:
+            if not self.knowledge_base_id:
+                return {'success': False, 'error': 'Knowledge Base ID no configurado'}
+            
+            response = self.bedrock_agent_client.list_data_sources(
+                knowledgeBaseId=self.knowledge_base_id
+            )
+            
+            data_sources = []
+            
+            for data_source in response['dataSourceSummaries']:
+                # Información básica con valores por defecto seguros
+                ds_info = {
+                    'data_source_id': data_source.get('dataSourceId', 'N/A'),
+                    'name': data_source.get('name', 'Sin nombre'),
+                    'status': data_source.get('status', 'UNKNOWN'),
+                    'description': data_source.get('description', 'Sin descripción'),
+                    'type': 'Desconocido',
+                    'bucket_name': 'No disponible'
+                }
+                
+                # Configuración de forma segura
+                ds_config = data_source.get('dataSourceConfiguration', {})
+                
+                # Verificar si es S3
+                if ds_config.get('type') == 'S3':
+                    ds_info['type'] = 'S3'
+                    s3_config = ds_config.get('s3Configuration', {})
+                    ds_info['bucket_name'] = s3_config.get('bucketName', 'No especificado')
+                    ds_info['inclusion_prefixes'] = s3_config.get('inclusionPrefixes', [])
+                
+                # Información de ingestión segura
+                ingestion_summary = data_source.get('ingestionSummary', {})
+                ds_info['last_ingestion_status'] = ingestion_summary.get('lastIngestionStatus', 'No sincronizado')
+                
+                last_ingestion_time = ingestion_summary.get('lastIngestionTime')
+                if last_ingestion_time and hasattr(last_ingestion_time, 'strftime'):
+                    ds_info['last_ingestion_time'] = last_ingestion_time.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    ds_info['last_ingestion_time'] = 'Nunca'
+                
+                data_sources.append(ds_info)
+            
+            return {
+                'success': True,
+                'data_sources': data_sources,
+                'total_sources': len(data_sources)
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': f"Error obteniendo data sources: {str(e)}"}

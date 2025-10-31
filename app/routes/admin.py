@@ -61,15 +61,15 @@ def upload_ui():
                 )
                 
                 if db.save_document(document):
-                    flash(f'✅ Documento "{upload_result["original_filename"]}" subido exitosamente', 'success')
+                    flash(f'Documento "{upload_result["original_filename"]}" subido exitosamente', 'success')
                     return redirect(url_for('admin.upload_ui'))
                 else:
-                    flash('❌ Error guardando metadata del documento', 'danger')
+                    flash('Error guardando metadata del documento', 'danger')
             else:
-                flash(f'❌ Error subiendo archivo: {upload_result["error"]}', 'danger')
+                flash(f'Error subiendo archivo: {upload_result["error"]}', 'danger')
                 
         except Exception as e:
-            flash(f'❌ Error inesperado: {str(e)}', 'danger')
+            flash(f'Error inesperado: {str(e)}', 'danger')
     
     # Obtener documentos del usuario actual
     documents = db.get_user_documents(current_user.id)
@@ -126,3 +126,27 @@ def delete_document(document_id):
             
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/sync-status')
+@login_required
+def sync_status():
+    """Ruta para verificar estado de sincronización"""
+    s3_service = S3Service()
+    
+    # Obtener estado de sync
+    sync_status = s3_service.get_sync_status()
+    
+    # Obtener info del data source
+    data_source_info = s3_service.get_data_source_info()
+    
+    return render_template('admin/sync_status.html',
+                         sync_status=sync_status,
+                         data_source_info=data_source_info)
+
+@admin_bp.route('/api/sync-status')
+@login_required
+def api_sync_status():
+    """API endpoint para estado de sincronización"""
+    s3_service = S3Service()
+    sync_status = s3_service.get_sync_status()
+    return jsonify(sync_status)

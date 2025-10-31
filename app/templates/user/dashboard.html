@@ -3,26 +3,70 @@
 {% block title %}Dashboard Usuario - BMC{% endblock %}
 
 {% block main %}
-<div class="card">
-    <h1>Dashboard Usuario</h1>
-    <p class="subtitle">Bienvenido, {{ current_user.email }}</p>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Dashboard Usuario</h1>
+        <p class="dashboard-subtitle">Bienvenido, {{ current_user.email }}</p>
+    </div>
     
-    <div class="row">
-        <div class="card" style="flex: 1;">
-            <h3>💬 Chat con Agentes</h3>
-            <p>Inicia una conversación con nuestros agentes inteligentes</p>
-            <a href="{{ url_for('main.user_chat') }}" class="btn btn-outline" style="width: auto;">
-                Ir al Chat
-            </a>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon user-icon">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="stat-content">
+                <h3>Tu Perfil</h3>
+                <p class="stat-number">Activo</p>
+                <p class="stat-trend">Usuario verificado</p>
+            </div>
         </div>
         
-        <div class="card" style="flex: 1;">
-            <h3>📋 Mis Actividades</h3>
-            <p>Revisa tu historial y actividades recientes</p>
-            <button class="btn btn-outline" style="width: auto;">
-                Ver Actividades
-            </button>
+        <div class="stat-card">
+            <div class="stat-icon admin-icon">
+                <i class="fas fa-history"></i>
+            </div>
+            <div class="stat-content">
+                <h3>Actividad Reciente</h3>
+                <p class="stat-number">5</p>
+                <p class="stat-trend">Acciones esta semana</p>
+            </div>
         </div>
     </div>
+    
+    <div class="section-card">
+        <div class="section-header">
+            <h2><i class="fas fa-rocket"></i> Acciones Rápidas</h2>
+        </div>
+        
+        <div class="actions-grid">
+            <a href="{{ url_for('main.user_chat') }}" class="action-card" aria-label="Iniciar chat con agentes">
+                <div class="action-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Chat con Agentes</h4>
+                    <p>Inicia una conversación con nuestros agentes inteligentes</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </a>
+            
+            <a href="#" class="action-card" aria-label="Ver historial de actividades">
+                <div class="action-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="action-content">
+                    <h4>Mis Actividades</h4>
+                    <p>Revisa tu historial y actividades recientes</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </a>
+        </div>
+    </div>
+    
+
 </div>
 {% endblock %}

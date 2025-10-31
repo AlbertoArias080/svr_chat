@@ -15,7 +15,7 @@ class BedrockAgentService:
             region_name=Config.AWS_REGION
         )
         
-        # Configuración de tu agente específico
+        # Configuración del agente específico
         self.agent_id = os.environ.get('BEDROCK_AGENT_ID')
         self.agent_alias_id = os.environ.get('BEDROCK_AGENT_ALIAS_ID') or 'TSTALIASID'
         self.knowledge_base_id = os.environ.get('BEDROCK_KNOWLEDGE_BASE_ID')
@@ -176,7 +176,7 @@ class BedrockAgentService:
         except Exception as e:
             return {'success': False, 'error': f'Error obteniendo info del agente: {str(e)}'}
 
-# Agente especializado que usa tu agente personalizado
+# Agente especializado que usa el agente personalizado
 class BMCCustomAgent:
     def __init__(self):
         self.agent_service = BedrockAgentService()
@@ -205,8 +205,8 @@ class BMCCustomAgent:
         result = self.agent_service.invoke_agent(user_message, session_id)
         
         # Si falla, intentar con RetrieveAndGenerate directo
-        if not result['success'] and self.agent_service.knowledge_base_id:
-            result = self.agent_service.retrieve_and_generate(user_message)
+        #if not result['success'] and self.agent_service.knowledge_base_id:
+        #    result = self.agent_service.retrieve_and_generate(user_message)
         
         return result
     

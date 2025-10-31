@@ -48,10 +48,10 @@ class DynamoDB:
         try:
             # Intentar describir la tabla para ver si existe
             self.table.table_status
-            print(f"✅ Tabla DynamoDB '{self.table_name}' existe y está accesible")
+            print(f"Tabla DynamoDB '{self.table_name}' existe y está accesible")
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                print(f"📦 Creando tabla DynamoDB '{self.table_name}'...")
+                print(f"Creando tabla DynamoDB '{self.table_name}'...")
                 self._create_table()
             else:
                 raise e
@@ -102,9 +102,9 @@ class DynamoDB:
                 }
             )
             table.wait_until_exists()
-            print(f"✅ Tabla '{self.table_name}' creada exitosamente")
+            print(f"Tabla '{self.table_name}' creada exitosamente")
         except ClientError as e:
-            print(f"❌ Error creando tabla: {e}")
+            print(f"Error creando tabla: {e}")
             raise e
 
     def create_user(self, user):
@@ -114,13 +114,13 @@ class DynamoDB:
                 Item=user_data,
                 ConditionExpression='attribute_not_exists(email)'
             )
-            print(f"✅ Usuario {user.email} creado exitosamente")
+            print(f"Usuario {user.email} creado exitosamente")
             return True
         except ClientError as e:
             if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-                print(f"⚠️  Usuario {user.email} ya existe")
+                print(f"Usuario {user.email} ya existe")
                 return False
-            print(f"❌ Error creando usuario: {e}")
+            print(f"Error creando usuario: {e}")
             return False
 
     def get_user_by_email(self, email):
@@ -130,12 +130,12 @@ class DynamoDB:
                 KeyConditionExpression=boto3.dynamodb.conditions.Key('email').eq(email)
             )
             if response['Items']:
-                print(f"✅ Usuario {email} encontrado")
+                print(f"Usuario {email} encontrado")
                 return User.from_dict(response['Items'][0])
-            print(f"⚠️  Usuario {email} no encontrado")
+            print(f"Usuario {email} no encontrado")
             return None
         except ClientError as e:
-            print(f"❌ Error buscando usuario por email: {e}")
+            print(f"Error buscando usuario por email: {e}")
             return None
 
     def get_user_by_id(self, user_id):
@@ -145,7 +145,7 @@ class DynamoDB:
                 return User.from_dict(response['Item'])
             return None
         except ClientError as e:
-            print(f"❌ Error buscando usuario por ID: {e}")
+            print(f"Error buscando usuario por ID: {e}")
             return None
 
     def list_users(self):
@@ -153,7 +153,7 @@ class DynamoDB:
             response = self.table.scan()
             return [User.from_dict(item) for item in response.get('Items', [])]
         except ClientError as e:
-            print(f"❌ Error listando usuarios: {e}")
+            print(f"Error listando usuarios: {e}")
             return []
 
 #Tablas y gestion de documentos
@@ -203,12 +203,12 @@ class DynamoDB:
                 }
             )
             table.wait_until_exists()
-            print("✅ Tabla 'documents' creada exitosamente")
+            print("Tabla 'documents' creada exitosamente")
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceInUseException':
-                print("ℹ️  Tabla 'documents' ya existe")
+                print("Tabla 'documents' ya existe")
             else:
-                print(f"❌ Error creando tabla documents: {e}")
+                print(f"Error creando tabla documents: {e}")
 
     def save_document(self, document):
         """Guardar documento en DynamoDB"""
@@ -216,7 +216,7 @@ class DynamoDB:
             self.dynamodb.Table('documents').put_item(Item=document.to_dict())
             return True
         except ClientError as e:
-            print(f"❌ Error guardando documento: {e}")
+            print(f"Error guardando documento: {e}")
             return False
 
     def get_user_documents(self, user_id):
@@ -228,7 +228,7 @@ class DynamoDB:
             )
             return [Document.from_dict(item) for item in response.get('Items', [])]
         except ClientError as e:
-            print(f"❌ Error obteniendo documentos: {e}")
+            print(f"Error obteniendo documentos: {e}")
             return []
 
     def get_all_documents(self):
@@ -237,7 +237,7 @@ class DynamoDB:
             response = self.dynamodb.Table('documents').scan()
             return [Document.from_dict(item) for item in response.get('Items', [])]
         except ClientError as e:
-            print(f"❌ Error obteniendo todos los documentos: {e}")
+            print(f"Error obteniendo todos los documentos: {e}")
             return []
 
     def delete_document(self, document_id):
@@ -246,7 +246,7 @@ class DynamoDB:
             self.dynamodb.Table('documents').delete_item(Key={'document_id': document_id})
             return True
         except ClientError as e:
-            print(f"❌ Error eliminando documento: {e}")
+            print(f"Error eliminando documento: {e}")
             return False
 
 #Tablas y gestion de chat
@@ -296,12 +296,12 @@ class DynamoDB:
                 }
             )
             table.wait_until_exists()
-            print("✅ Tabla 'chat_messages' creada exitosamente")
+            print("Tabla 'chat_messages' creada exitosamente")
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceInUseException':
-                print("ℹ️  Tabla 'chat_messages' ya existe")
+                print("Tabla 'chat_messages' ya existe")
             else:
-                print(f"❌ Error creando tabla chat_messages: {e}")
+                print(f"Error creando tabla chat_messages: {e}")
 
     def save_chat_message(self, message):
         """Guardar mensaje de chat en DynamoDB"""
@@ -309,7 +309,7 @@ class DynamoDB:
             self.dynamodb.Table('chat_messages').put_item(Item=message.to_dict())
             return True
         except ClientError as e:
-            print(f"❌ Error guardando mensaje de chat: {e}")
+            print(f"Error guardando mensaje de chat: {e}")
             return False
 
     def get_user_chat_history(self, user_id, limit=50):
@@ -326,7 +326,7 @@ class DynamoDB:
             messages.sort(key=lambda x: x.timestamp)
             return messages
         except ClientError as e:
-            print(f"❌ Error obteniendo historial de chat: {e}")
+            print(f"Error obteniendo historial de chat: {e}")
             return []
 
     def clear_user_chat_history(self, user_id):
@@ -338,7 +338,7 @@ class DynamoDB:
                     batch.delete_item(Key={'message_id': message.message_id})
             return True
         except ClientError as e:
-            print(f"❌ Error eliminando historial de chat: {e}")
+            print(f"Error eliminando historial de chat: {e}")
             return False
         
 class Document:

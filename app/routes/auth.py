@@ -39,7 +39,7 @@ def register():
             user_id=str(uuid.uuid4()),
             email=form.email.data,
             password=hashed_password,
-            role='user'  # Por defecto todos son usuarios normales
+            role='user'  # Por defecto todos son usuarios normales, se cambia el estado en el perfil admin
         )
         
         if db.create_user(user):

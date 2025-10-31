@@ -1,0 +1,246 @@
+{% extends "base_sidebar.html" %}
+
+{% block main %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h1>Estado de Sincronización</h1>
+        <p class="dashboard-subtitle">Knowledge Base - Monitoreo del sistema</p>
+    </div>
+
+    <!-- Resumen del Sistema -->
+    <div class="section-card status-overview">
+        <div class="section-header">
+            <h2><i class="fas fa-check-circle"></i> Sistema Conectado y Funcionando</h2>
+        </div>
+        <div class="status-grid">
+            <div class="status-item">
+                <div class="status-icon kb-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div class="status-content">
+                    <h3>Knowledge Base</h3>
+                    <p>knowledge-base-quick-start-goop7</p>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon ds-icon">
+                    <i class="fas fa-cloud"></i>
+                </div>
+                <div class="status-content">
+                    <h3>Data Source S3</h3>
+                    <p>knowledge-base-quick-start-qemdb-data-source</p>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon bucket-icon">
+                    <i class="fas fa-archive"></i>
+                </div>
+                <div class="status-content">
+                    <h3>Bucket</h3>
+                    <p>svr_pruebas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Última Sincronización -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2><i class="fas fa-sync-alt"></i> Última Sincronización</h2>
+            <span class="data-source-count">
+                {{ sync_status.data_sources_count or 1 }} Data Source(s)
+            </span>
+        </div>
+        
+        {% if sync_status.success %}
+            {% if sync_status.last_sync_job %}
+                <div class="table-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Data Source</th>
+                                <th>Estado</th>
+                                <th>Iniciado</th>
+                                <th>Job ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set job = sync_status.last_sync_job %}
+                            <tr>
+                                <td class="data-source-info">
+                                    <div class="data-source-name">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <strong>{{ job.data_source_name }}</strong>
+                                    </div>
+                                    {% if job.data_source_id %}
+                                    <div class="data-source-id">
+                                        <code>{{ job.data_source_id[:8] }}...</code>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="sync-status-badge status-{{ job.status|lower }}">
+                                        <i class="fas 
+                                            {% if job.status == 'COMPLETE' %}fa-check-circle
+                                            {% elif job.status == 'FAILED' %}fa-exclamation-circle
+                                            {% elif job.status == 'IN_PROGRESS' %}fa-sync-alt
+                                            {% elif job.status == 'STARTING' %}fa-play-circle
+                                            {% else %}fa-circle{% endif %}">
+                                        </i>
+                                        {{ job.status }}
+                                    </span>
+                                    {% if job.error %}
+                                    <div class="sync-error">
+                                        <small>{{ job.error }}</small>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="sync-time">
+                                    <i class="fas fa-clock"></i>
+                                    {{ job.started_at_iso if job.started_at_iso else job.started_at }}
+                                </td>
+                                <td class="job-id">
+                                    <code>{{ job.job_id[:8] }}...</code>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sync-footer">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Última sincronización encontrada
+                    </small>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-sync"></i>
+                    </div>
+                    <h3>No hay trabajos de sincronización recientes</h3>
+                    <p>Los trabajos aparecerán aquí cuando se sincronicen documentos con la Knowledge Base.</p>
+                    {% if sync_status.message %}
+                    <div class="info-message">
+                        {{ sync_status.message }}
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="error-state">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>Error de conexión</h3>
+                <p>{{ sync_status.error }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Fuentes de Datos Configuradas -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2><i class="fas fa-cogs"></i> Fuentes de Datos Configuradas</h2>
+        </div>
+        
+        {% if data_source_info.success %}
+            {% if data_source_info.data_sources %}
+                <div class="data-sources-grid">
+                    {% for ds in data_source_info.data_sources %}
+                    <div class="data-source-card 
+                        {% if ds.type == 'S3' %}s3-source
+                        {% else %}custom-source{% endif %}">
+                        <div class="data-source-header">
+                            <div class="data-source-type">
+                                <div class="source-icon">
+                                    {% if ds.type == 'S3' %}
+                                    <i class="fas fa-bucket"></i>
+                                    {% else %}
+                                    <i class="fas fa-server"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="source-info">
+                                    <h4>{{ ds.name }}</h4>
+                                    <div class="source-badges">
+                                        <span class="type-badge type-{{ ds.type|lower }}">
+                                            {{ ds.type }}
+                                        </span>
+                                        <span class="status-badge status-{{ ds.status|lower }}">
+                                            {{ ds.status }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="source-id">
+                                <small>ID: {{ ds.data_source_id[:8] }}...</small>
+                            </div>
+                        </div>
+                        
+                        <div class="data-source-details">
+                            <div class="detail-row">
+                                <div class="detail-item">
+                                    <strong>Configuración:</strong>
+                                    <div class="config-info">
+                                        {% if ds.bucket_name and ds.bucket_name != 'No disponible' %}
+                                        <span class="config-success">
+                                            <i class="fas fa-check-circle"></i>
+                                            Bucket: {{ ds.bucket_name }}
+                                        </span>
+                                        {% else %}
+                                        <span class="config-custom">
+                                            <i class="fas fa-cog"></i>
+                                            Configuración personalizada
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <strong>Última Sincronización:</strong>
+                                    <div class="sync-info">
+                                        <span class="sync-badge status-{{ ds.last_ingestion_status|lower }}">
+                                            <i class="fas 
+                                                {% if ds.last_ingestion_status == 'COMPLETE' %}fa-check
+                                                {% elif ds.last_ingestion_status == 'FAILED' %}fa-times
+                                                {% else %}fa-clock{% endif %}">
+                                            </i>
+                                            {{ ds.last_ingestion_status }}
+                                        </span>
+                                        <div class="sync-time">
+                                            <small>{{ ds.last_ingestion_time }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if ds.description and ds.description != 'Sin descripción' %}
+                            <div class="source-description">
+                                <i class="fas fa-align-left"></i>
+                                {{ ds.description }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>No se encontraron data sources configurados</h3>
+                    <p>Configure las fuentes de datos para comenzar la sincronización.</p>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="error-state">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <h3>Error al cargar fuentes de datos</h3>
+                <p>{{ data_source_info.error }}</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
