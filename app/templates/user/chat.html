@@ -19,7 +19,7 @@
                     Conectado a Amazon Bedrock Agent con Knowledge Base
                 </p>
             </div>
-            <div style="background: #2d5a4d; color: #7fffd4; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem;">
+            <div style="background: #2c5d9cff; color: #7fffd4; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem;">
                 <i class="fas fa-brain"></i> Knowledge Base Activa
             </div>
         </div>
@@ -31,7 +31,7 @@
             <div>
                 <strong>Agente:</strong> 
                 <span style="color: #3b82f6; font-weight: 600;">Bedrock Agent Personalizado</span>
-                <span id="agent-status" style="margin-left: 8px; padding: 4px 8px; background: #2d5a4d; color: #7fffd4; border-radius: 4px; font-size: 0.8rem;">
+                <span id="agent-status" style="margin-left: 8px; padding: 4px 8px; background: #2c5d9cff; color: #7fffd4; border-radius: 4px; font-size: 0.8rem;">
                     <i class="fas fa-circle"></i> Conectado
                 </span>
             </div>
@@ -51,7 +51,7 @@
         <!-- Mensaje de bienvenida -->
         <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #3b82f6;">
             <div style="display: flex; align-items: start; gap: 12px;">
-                <div style="background: #2d5a4d; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; color: #7fffd4;">
+                <div style="background: #2c5d9cff; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; color: #7fffd4;">
                     <i class="fas fa-robot"></i> AGENTE BMC
                 </div>
                 <div style="flex: 1;">
@@ -76,7 +76,7 @@
             <input type="text" name="message" id="message-input" class="input" 
                    placeholder="Escribe tu pregunta para el agente especializado..." style="flex: 1;" 
                    required autocomplete="off">
-            <button type="submit" class="btn" style="width: auto; background: #2d5a4d; border-color: #2d5a4d;" id="send-button">
+            <button type="submit" class="btn" style="width: auto; background: #2c5d9cff; border-color: #2c5d9cff;" id="send-button">
                 <span id="send-text"><i class="fas fa-paper-plane"></i> Enviar</span>
                 <span id="loading-spinner" style="display: none;"><i class="fas fa-spinner fa-spin"></i> Consultando...</span>
             </button>
@@ -124,7 +124,7 @@ function checkAgentStatus() {
             const statusElement = document.getElementById('agent-status');
             if (data.success) {
                 statusElement.innerHTML = `<i class="fas fa-circle"></i> ${data.agent_status} - ${data.agent_name}`;
-                statusElement.style.background = '#2d5a4d';
+                statusElement.style.background = '#2c5d9cff';
             } else {
                 statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error de conexión';
                 statusElement.style.background = '#dc2626';
@@ -188,9 +188,9 @@ function addMessageToChat(message, role, animate = true, citations = false) {
         }
         
         messageDiv.innerHTML = `
-            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #2d5a4d;">
+            <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #2c5d9cff;">
                 <div style="display: flex; align-items: start; gap: 12px;">
-                    <div style="background: #2d5a4d; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; color: #7fffd4;">
+                    <div style="background: #2c5d9cff; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; color: #7fffd4;">
                         <i class="fas fa-robot"></i> AGENTE
                     </div>
                     <div style="flex: 1;">
@@ -226,9 +226,9 @@ function showTypingIndicator() {
     const typingDiv = document.createElement('div');
     typingDiv.id = 'typing-indicator';
     typingDiv.innerHTML = `
-        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #2d5a4d;">
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #2d64a3ff;">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="background: #2d5a4d; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; color: #7fffd4;">
+                <div style="background: #2e5ea5ff; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; color: #7fffd4;">
                     <i class="fas fa-robot"></i> AGENTE
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px; color: #64748b; font-style: italic;">

@@ -115,7 +115,7 @@
                                         Descargar
                                     </a>
                                     <button class="upload-btn upload-delete" 
-                                            onclick="deleteDocument('{{ doc.document_id }}', '{{ doc.original_filename }}')">
+                                            onclick="deleteDocument('{{ doc.document_id }}', '{{ doc.original_filename }}', this)">
                                         <i class="fas fa-trash"></i>
                                         Eliminar
                                     </button>
@@ -144,36 +144,66 @@ document.getElementById('document').addEventListener('change', function(e) {
     document.getElementById('fileName').textContent = fileName;
 });
 
-function deleteDocument(documentId, filename) {
-    if (confirm(`¿Estás seguro de que quieres eliminar "${filename}"?`)) {
-        const deleteBtn = event.target.closest('.delete-btn');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
-        deleteBtn.disabled = true;
-        
-        fetch(`/admin/delete-document/${documentId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification('Documento eliminado exitosamente', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showNotification('Error eliminando documento: ' + data.error, 'error');
-                deleteBtn.innerHTML = originalText;
-                deleteBtn.disabled = false;
-            }
-        })
-        .catch(error => {
-            showNotification('Error de conexión: ' + error, 'error');
-            deleteBtn.innerHTML = originalText;
-            deleteBtn.disabled = false;
-        });
+function deleteDocument(documentId, filename, buttonElement) {
+    if (!confirm(`¿Estás seguro de que quieres eliminar "${filename}"?`)) {
+        return;
     }
+    
+    // Verificar que el botón existe
+    if (!buttonElement) {
+        console.error('Botón no encontrado');
+        showNotification('Error: No se pudo encontrar el botón de eliminar', 'error');
+        return;
+    }
+    
+    const originalText = buttonElement.innerHTML;
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+    buttonElement.disabled = true;
+    
+    fetch(`/admin/delete-document/${documentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Documento eliminado exitosamente', 'success');
+            // Eliminar la fila de la tabla sin recargar la página
+            const documentRow = document.getElementById(`document-${documentId}`);
+            if (documentRow) {
+                documentRow.style.opacity = '0';
+                setTimeout(() => {
+                    documentRow.remove();
+                    // Actualizar contador si existe
+                    const countElement = document.querySelector('.section-header h2');
+                    if (countElement) {
+                        const currentCount = parseInt(countElement.textContent.match(/\((\d+)\)/)?.[1] || '0');
+                        countElement.textContent = countElement.textContent.replace(/\(\d+\)/, `(${currentCount - 1})`);
+                    }
+                }, 500);
+            } else {
+                // Fallback: recargar después de 1 segundo si no se puede eliminar la fila
+                setTimeout(() => location.reload(), 1000);
+            }
+        } else {
+            showNotification('Error eliminando documento: ' + (data.error || 'Error desconocido'), 'error');
+            buttonElement.innerHTML = originalText;
+            buttonElement.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error de conexión: ' + error.message, 'error');
+        buttonElement.innerHTML = originalText;
+        buttonElement.disabled = false;
+    });
 }
 
 function showNotification(message, type) {

@@ -10,15 +10,15 @@ def list_all_users():
     db = DynamoDB()
     users = db.list_users()
     
-    print("📊 USUARIOS REGISTRADOS EN DYNAMODB")
+    print("USUARIOS REGISTRADOS EN DYNAMODB")
     print("=" * 80)
     
     if not users:
-        print("❌ No hay usuarios registrados")
+        print("No hay usuarios registrados")
         return
     
     for i, user in enumerate(users, 1):
-        print(f"\n👤 Usuario #{i}")
+        print(f"\n Usuario #{i}")
         print(f"   Email: {user.email}")
         print(f"   Rol: {user.role}")
         print(f"   ID: {user.id}")
