@@ -8,12 +8,8 @@ from config import Config
 
 class BedrockAgentService:
     def __init__(self):
-        self.agent_client = boto3.client(
-            'bedrock-agent-runtime',
-            aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
-            region_name=Config.AWS_REGION
-        )
+        
+        self.agent_client = boto3.client('bedrock-agent-runtime')
         
         # Configuración del agente específico
         self.agent_id = os.environ.get('BEDROCK_AGENT_ID')
@@ -152,12 +148,8 @@ class BedrockAgentService:
         Obtener información sobre el agente configurado
         """
         try:
-            agent_client = boto3.client(
-                'bedrock-agent',
-                aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
-                region_name=Config.AWS_REGION
-            )
+            
+            agent_client = boto3.client('bedrock-agent')
             
             response = agent_client.get_agent(agentId=self.agent_id)
             agent_alias = agent_client.get_agent_alias(

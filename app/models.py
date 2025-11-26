@@ -35,12 +35,8 @@ class User(UserMixin):
 class DynamoDB:
     def __init__(self):
         self.table_name = 'users'
-        self.dynamodb = boto3.resource(
-            'dynamodb',
-            aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
-            region_name=Config.AWS_REGION
-        )
+
+        self.dynamodb = boto3.resource('dynamodb')
         self.table = self.dynamodb.Table(self.table_name)
         self._ensure_table_exists()
 

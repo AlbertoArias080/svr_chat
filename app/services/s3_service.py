@@ -7,24 +7,21 @@ import time
 
 class S3Service:
     def __init__(self):
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
-            region_name=Config.AWS_REGION
-        )
-        self.bucket_name = Config.S3_BUCKET_NAME
-        self.ensure_bucket_exists()
+
+        self.s3_client = boto3.client('s3')
+        self.bedrock_agent_client = boto3.client('bedrock-agent')
         
-        self.bedrock_agent_client = boto3.client(
-            'bedrock-agent',
-            aws_access_key_id=Config.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
-            region_name=Config.AWS_REGION
-        )
-        
+        # Obtener configuración de variables de entorno
+        self.bucket_name = os.environ.get('S3_BUCKET_NAME')
+        self.region = os.environ.get('AWS_REGION', 'us-east-1')
+        self.upload_folder = os.environ.get('S3_UPLOAD_FOLDER', 'uploads')
         self.knowledge_base_id = os.environ.get('BEDROCK_KNOWLEDGE_BASE_ID')
+        
+        if not self.bucket_name:
+            raise ValueError("S3_BUCKET_NAME must be set in environment variables")
+            
         self.ensure_bucket_exists()
+
 
     def ensure_bucket_exists(self):
         """Verificar que el bucket S3 existe, si no crearlo"""
