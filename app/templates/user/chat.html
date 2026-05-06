@@ -259,13 +259,32 @@ function scrollToBottom() {
 }
 
 function escapeHtml(unsafe) {
-    return unsafe
+    const escaped = unsafe
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;")
-        .replace(/\n/g, '<br>');
+        .replace(/'/g, "&#039;");
+    return escaped
+        .split(/\n{2,}/)
+        .map(p => `<p style="margin:0 0 4px 0">${p.replace(/\n/g, '<br>')}</p>`)
+        .join('');
+}
+
+async function sendWithRetry(body, maxRetries = 1) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch('/api/chat/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            return await response.json();
+        } catch (error) {
+            if (attempt === maxRetries) throw error;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
 }
 
 // Manejar envío de mensajes
@@ -291,30 +310,19 @@ document.getElementById('chat-form').addEventListener('submit', function(e) {
         document.getElementById('send-text').style.display = 'none';
         document.getElementById('loading-spinner').style.display = 'inline';
         
-        // Enviar mensaje al servidor
-        fetch('/api/chat/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: message })
-        })
-        .then(response => response.json())
+        // Enviar mensaje al servidor con un reintento automático
+        sendWithRetry({ message: message })
         .then(data => {
             hideTypingIndicator();
-            
             if (data.success) {
                 addMessageToChat(data.response, 'assistant', true, data.has_citations);
-                if (data.has_citations) {
-                    console.log('Respuesta con', data.citations_count, 'citaciones de la Knowledge Base');
-                }
             } else {
-                addMessageToChat(`<i class="fas fa-exclamation-triangle"></i> Error del agente: ${data.error}`, 'assistant');
+                addMessageToChat(`⚠️ ${data.error}`, 'assistant');
             }
         })
         .catch(error => {
             hideTypingIndicator();
-            addMessageToChat(`<i class="fas fa-exclamation-triangle"></i> Error de conexión: ${error}`, 'assistant');
+            addMessageToChat('⚠️ No se pudo conectar con el agente. Verifica tu conexión e intenta de nuevo.', 'assistant');
         })
         .finally(() => {
             // Rehabilitar formulario
