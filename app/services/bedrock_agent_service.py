@@ -2,14 +2,25 @@ import boto3
 import json
 import uuid
 import os
+import logging
 from botocore.exceptions import ClientError, BotoCoreError
+from botocore.config import Config as BotoCoreConfig
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class BedrockAgentService:
     def __init__(self):
         
-        self.agent_client = boto3.client('bedrock-agent-runtime')
+        self.agent_client = boto3.client(
+            'bedrock-agent-runtime',
+            config=BotoCoreConfig(
+                read_timeout=120,
+                connect_timeout=10,
+                retries={'max_attempts': 2}
+            )
+        )
         
         # Configuración del agente específico
         self.agent_id = os.environ.get('BEDROCK_AGENT_ID')
@@ -38,19 +49,56 @@ class BedrockAgentService:
             # Procesar la respuesta stream
             completion = ""
             citations = []
-            
+
             for event in response['completion']:
                 if 'chunk' in event:
                     chunk = event['chunk']
-                    completion += chunk['bytes'].decode('utf-8')
-                
-                elif 'citation' in event:
-                    citation = event['citation']
-                    citations.append({
-                        'generated_response_part': citation.get('generatedResponsePart', {}).get('text', ''),
-                        'retrieved_references': citation.get('retrievedReferences', [])
-                    })
-            
+                    if 'bytes' in chunk:
+                        completion += chunk['bytes'].decode('utf-8')
+                    # Las citas vienen dentro del chunk, no como evento separado
+                    if 'attribution' in chunk:
+                        for citation in chunk['attribution'].get('citations', []):
+                            citations.append({
+                                'generated_response_part': citation.get('generatedResponsePart', {}).get('textResponsePart', {}).get('text', ''),
+                                'retrieved_references': citation.get('retrievedReferences', [])
+                            })
+
+                elif 'returnControl' in event:
+                    # El agente solicitó ejecutar un action group
+                    rc = event['returnControl']
+                    invocation_id = rc.get('invocationId', '')
+                    inputs = rc.get('invocationInputs', [])
+                    logger.warning(f"Agent returnControl — invocationId={invocation_id}, inputs={inputs}")
+                    return {
+                        'success': False,
+                        'error': 'El agente requiere ejecutar una acción que no está configurada en la aplicación. Contacta al administrador.'
+                    }
+
+                elif 'trace' in event:
+                    pass  # Solo diagnóstico, no afecta la respuesta
+
+                elif 'internalServerException' in event:
+                    msg = event['internalServerException'].get('message', 'Error interno')
+                    logger.error(f"Bedrock internalServerException: {msg}")
+                    return {'success': False, 'error': f'Error interno de Bedrock: {msg}'}
+
+                elif 'throttlingException' in event:
+                    logger.warning("Bedrock throttlingException")
+                    return {'success': False, 'error': 'Límite de solicitudes alcanzado. Intenta en unos segundos.'}
+
+                elif 'validationException' in event:
+                    msg = event['validationException'].get('message', 'Error de validación')
+                    return {'success': False, 'error': f'Error de validación: {msg}'}
+
+                else:
+                    logger.debug(f"Evento desconocido del agente: {list(event.keys())}")
+
+            logger.info(f"Agente respondió — sesión={session_id}, chars={len(completion)}, citas={len(citations)}")
+
+            if not completion:
+                logger.warning(f"El agente devolvió una respuesta vacía — sesión={session_id}")
+                return {'success': False, 'error': 'El agente no generó una respuesta. Intenta de nuevo.'}
+
             return {
                 'success': True,
                 'response': completion.strip(),
@@ -80,19 +128,19 @@ class BedrockAgentService:
         """
         try:
             
-            spanish_query = f"Responde en español: {query}"
-            
             if not retrieval_config:
                 retrieval_config = {
                     'vectorSearchConfiguration': {
                         'numberOfResults': 5,
-                        'overrideSearchType': 'SEMANTIC'  # or 'SEMANTIC'
+                        'overrideSearchType': 'SEMANTIC'
                     }
                 }
-            
+
+            spanish_prompt = f"Por favor responde siempre en español. {prompt}"
+
             response = self.agent_client.retrieve_and_generate(
                 input={
-                    'text': prompt
+                    'text': spanish_prompt
                 },
                 retrieveAndGenerateConfiguration={
                     'type': 'KNOWLEDGE_BASE',
@@ -193,8 +241,14 @@ class BMCCustomAgent:
         """
         Procesar mensaje usando tu agente personalizado con Knowledge Base
         """
-        # Primero intentar con el agente completo
-        result = self.agent_service.invoke_agent(user_message, session_id)
+        prompt = (
+            "Responde SIEMPRE en español. "
+            "Basa tu respuesta en la información de los documentos de la Knowledge Base. "
+            "Si después de consultar los documentos no encuentras información relevante, indícalo brevemente. "
+            "No inventes datos como números, fechas o nombres que no estén en los documentos. "
+            f"Pregunta: {user_message}"
+        )
+        result = self.agent_service.invoke_agent(prompt, session_id)
         
         # Si falla, intentar con RetrieveAndGenerate directo
         #if not result['success'] and self.agent_service.knowledge_base_id:

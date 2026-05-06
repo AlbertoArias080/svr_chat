@@ -34,8 +34,10 @@ def send_message():
         if not user_message:
             return jsonify({'success': False, 'error': 'El mensaje no puede estar vacío'})
         
-        # Usar session_id único por usuario para mantener contexto
-        session_id = f"user_{current_user.id}"
+        # Sesión Bedrock almacenada en la sesión Flask para poder resetearla
+        if 'bedrock_session_id' not in session:
+            session['bedrock_session_id'] = str(uuid.uuid4())
+        session_id = session['bedrock_session_id']
         
         # Guardar mensaje del usuario
         user_msg = ChatMessage(
@@ -127,6 +129,8 @@ def clear_chat_history():
     """API para limpiar historial de chat"""
     try:
         if db.clear_user_chat_history(current_user.id):
+            # Resetear la sesión de Bedrock para que el agente empiece sin historial previo
+            session.pop('bedrock_session_id', None)
             return jsonify({'success': True, 'message': 'Historial limpiado'})
         else:
             return jsonify({'success': False, 'error': 'Error limpiando historial'})

@@ -3,7 +3,6 @@ import uuid
 from botocore.exceptions import ClientError, NoCredentialsError
 from config import Config
 import os
-import time
 
 class S3Service:
     def __init__(self):
@@ -78,9 +77,8 @@ class S3Service:
             
             # Generar URL del archivo
             file_url = f"https://{self.bucket_name}.s3.{Config.AWS_REGION}.amazonaws.com/{s3_key}"
-            
-            print("Archivo subido - La Lambda sincronizará automáticamente la KB")
-            time.sleep(2)
+
+            self._start_ingestion_job()
             return {
                 'success': True,
                 's3_key': s3_key,
@@ -101,11 +99,32 @@ class S3Service:
         """Eliminar archivo de S3"""
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
-            print("Archivo eliminado - La Lambda sincronizará automáticamente la KB")
-            time.sleep(2)
+            self._start_ingestion_job()
             return {'success': True}
         except ClientError as e:
             return {'success': False, 'error': f"Error eliminando archivo: {e}"}
+
+    def _start_ingestion_job(self):
+        """Disparar sincronización de la Knowledge Base. Si ya hay un job corriendo, lo ignora."""
+        if not self.knowledge_base_id:
+            return
+        try:
+            data_sources = self.bedrock_agent_client.list_data_sources(
+                knowledgeBaseId=self.knowledge_base_id
+            ).get('dataSourceSummaries', [])
+            if not data_sources:
+                return
+            data_source_id = data_sources[0]['dataSourceId']
+            self.bedrock_agent_client.start_ingestion_job(
+                knowledgeBaseId=self.knowledge_base_id,
+                dataSourceId=data_source_id
+            )
+            print(f"Ingestion job iniciado para KB {self.knowledge_base_id}")
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConflictException':
+                print("Ingestion job ya en progreso, se omite.")
+            else:
+                print(f"Error iniciando ingestion job: {e}")
 
     def list_files(self, prefix=None):
         """Listar archivos en S3"""
